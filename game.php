@@ -1,5 +1,6 @@
 <?php
 class Game {
+    private $authorized = false;
     public function __construct() {
         session_start();
         if (isset($_REQUEST['logout'])) {
@@ -10,7 +11,17 @@ class Game {
         }
         $db_user = "game";
         $db_pass = "123Game!!!";
-        $this->db = new mysqli("localhost", $db_user, $db_pass, 'game');
+        if (class_exists('mysqli')) {
+          try {
+            $this->db = new mysqli("localhost", $db_user, $db_pass, 'game');
+          } catch (Exception $e) {
+              var_dump($e);
+          }
+        } else {
+          print "mysqli не установлен";
+          die();
+        }
+        
         $this->authorized = $_SESSION['user'] ?? false;
         if ($this->authorized) {
             $this->user = $_SESSION['user'];
