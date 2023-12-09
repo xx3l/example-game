@@ -1,0 +1,11 @@
+{
+    "name": "group/example-game",
+    "description": "Game IDK",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Group\\ExampleGame\\": "src/"
+        }
+    },
+    "require": {}
+}
