@@ -1,20 +1,16 @@
 <?php
 
-namespace Game;
+namespace Group\ExampleGame\Game;
 
 use Exception;
-
-require 'db.php';
+use Group\ExampleGame\Game\Database;
+use Group\ExampleGame\Game\User;
 
 class Game
 {
-    protected DB $db;
+    protected Database $db;
     private mixed $authorized = false;
-    private mixed $user;
-    private int $xp;
-    private int $hp;
-    private int $x;
-    private int $y;
+    private User $user;
 
     public function __construct()
     {
@@ -27,8 +23,6 @@ class Game
             $_SESSION['user'] = $_REQUEST['user'];
         }
 
-        $db_user = "game";
-        $db_pass = "123Game!!!";
         $use_mysqli = true;
         $use_sqlite = false;
 
@@ -46,7 +40,7 @@ class Game
 
         if (class_exists('mysqli') && $use_mysqli) {
             try {
-                $this->db = new DB("mysqli", "localhost", $db_user, $db_pass, 'game');
+                $this->db = new Database("mysqli", "localhost", $db_user, $db_pass, 'game');
             } catch (Exception $e) {
                 print "Невозможно подключиться к БД mysql: " . $e->getMessage();
                 print "Будем использовать SQLite!";
@@ -58,7 +52,7 @@ class Game
 
         if ($use_sqlite) {
             print "(c) SQLite3";
-            $this->db = new DB('SQLite3', 'mysqlitedb.db');
+            $this->db = new Database('SQLite3', 'mysqlitedb.db');
 
             if (!file_exists('mysqlitedb.db')) {
                 $sql = file_get_contents('create_db.sql');
@@ -100,7 +94,6 @@ class Game
         }
     }
 
-
     public function authorize(): void
     {
         print '
@@ -130,84 +123,10 @@ class Game
         return sqrt(($query->fetch_assoc())['min']);
     }
 
-    public function pointInfo($x, $y)
-    {
-        $query = $this->db->query("select count(*) n from users where x=$x and y=$y");
-        $data = $query->fetch_assoc();
-        print_r($data);
-        return $data['n'];
-    }
-
-    public function process_actions(): void
-    {
-        if (isset($_REQUEST['direction'])) {
-            $dir = $_REQUEST['direction'];
-            $x = $this->x;
-            $y = $this->y;
-            switch ($dir) {
-                case 'N':
-                {
-                    $y++;
-                    break;
-                }
-                case 'S':
-                {
-                    $y--;
-                    break;
-                }
-                case 'W':
-                {
-                    $x--;
-                    break;
-                }
-                case 'E':
-                {
-                    $x++;
-                    break;
-                }
-            }
-            $info = $this->pointInfo($x, $y);
-            if ($this->pointInfo($x, $y) == 0) {
-                $this->db->query("update users set x=$x, y=$y where name='" . $this->user . "'");
-                $this->x = $x;
-                $this->y = $y;
-            }
-        }
-    }
 
     public function show(): void
     {
-        print '
-            Вы в игре, ' . $this->user . '!
-            <form method="post">
-            <input type="hidden" name="logout">
-            <input type="submit" value="Выйти">
-            </form>
-        ';
-        print "Здоровье: " . $this->hp;
-        print "<br>Опыт: " . $this->xp;
-        print "<br>X: " . $this->x;
-        print "<br>Y: " . $this->y;
-        print "<br>Ближайший враг: " . $this->getClosestDistance();
-        print '<form method="post">
-            <input type="hidden" name="direction" value="N">
-            <input type="submit" value="Идти на север">
-            </form>
-            ';
-        print '<form method="post">
-            <input type="hidden" name="direction" value="S">
-            <input type="submit" value="Идти на юг">
-            </form>
-            ';
-        print '<form method="post">
-            <input type="hidden" name="direction" value="E">
-            <input type="submit" value="Идти на восток">
-            </form>
-            ';
-        print '<form method="post">
-            <input type="hidden" name="direction" value="W">
-            <input type="submit" value="Идти на запад">
-            </form>
-            ';
+        // note lol
+        require_once 'public/input_form.php';
     }
 }

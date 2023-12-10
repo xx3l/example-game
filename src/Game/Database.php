@@ -1,15 +1,14 @@
 <?php
 
-namespace Game;
+namespace Group\ExampleGame\Game;
 
-class DB
+class Database
 {
     private mixed $db;
     private mixed $driver;
 
-    public function __construct(...$params)
+    public function __construct($driver, ...$params)
     {
-        $driver = array_shift($params);
         $this->driver = $driver;
         $this->db = new $driver(...$params);
     }
@@ -19,9 +18,7 @@ class DB
         $query = $this->db->query($sql);
 
         return new class($query, $this->driver) {
-
-            public function __construct(private $query, private $driver)
-            {}
+            public function __construct(private $query, private $driver){}
 
             public function fetchArray()
             {

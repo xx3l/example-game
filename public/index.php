@@ -1,8 +1,8 @@
 <?php
 
-require 'src\Game\game.php';
+require '../vendor/autoload.php';
 
-use Game\Game;
+use Group\ExampleGame\Game\Game;
 
 $game = new Game();
 $game->start();

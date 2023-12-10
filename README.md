@@ -1,6 +1,12 @@
 # [example-game](https://github.com/xx3l/example-game)
 Available [here](http://lexx.istu.webappz.ru/game/).
 
+## Quick start
+
+```
+composer install
+```
+
 ## ✅ Tasks
 
 ### 💢 Избавиться от Warining'ов
