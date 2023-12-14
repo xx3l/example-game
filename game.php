@@ -106,7 +106,20 @@ class Game {
       from users where name!='".$this->user."'");
     return sqrt(($query->fetch_assoc())['min']);
   }
-  
+  public function useItem($itemName) {
+    // Проверка наличия предмета у пользователя
+    $query = $this->db->query("select * from users where name = '" . $this->user . "'");
+    $userData = $query->fetch_assoc();
+
+    if ($userData['item_quantity'] > 0 && $userData['item_name'] == $itemName) {
+        // Использование предмета: увеличение здоровья
+        $this->hp += 10; // Предположим, что предмет увеличивает здоровье на 10 единиц
+        $this->db->query("update users set hp = $this->hp, item_quantity = item_quantity - 1 
+                          where name = '" . $this->user . "'");
+    } else {
+        print "У вас нет такого предмета!";
+    }
+}
   public function pointInfo($x, $y) {
       $query = $this->db->query("select count(*) n from users where x=$x and y=$y");
       $data = $query->fetch_assoc();
