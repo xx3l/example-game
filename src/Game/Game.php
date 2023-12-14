@@ -3,8 +3,8 @@
 namespace Group\ExampleGame\Game;
 
 use Exception;
-use Group\ExampleGame\Game\Database;
-use Group\ExampleGame\Game\User;
+use Group\ExampleGame\Domain\Database;
+use Group\ExampleGame\Models\User;
 
 class Game
 {
@@ -23,6 +23,7 @@ class Game
             $_SESSION['user'] = $_REQUEST['user'];
         }
 
+        $this->user = new User();
         $use_mysqli = true;
         $use_sqlite = false;
 
@@ -32,7 +33,7 @@ class Game
         }
 
         if (!class_exists('mysqli') && $use_mysqli) {
-            print "mysqli не установлен";
+            Helpers::console_log("mysqli не установлен");
             $use_mysqli = false;
             $use_sqlite = true;
             file_put_contents('.use_sqlite', '');
@@ -40,10 +41,10 @@ class Game
 
         if (class_exists('mysqli') && $use_mysqli) {
             try {
-                $this->db = new Database("mysqli", "localhost", $db_user, $db_pass, 'game');
+                $this->db = new Database("mysqli", "localhost", $this->user->username, $this->user->password, 'game');
             } catch (Exception $e) {
-                print "Невозможно подключиться к БД mysql: " . $e->getMessage();
-                print "Будем использовать SQLite!";
+                Helpers::console_log("Невозможно подключиться к БД mysql: " . $e->getMessage());
+                Helpers::console_log("Будем использовать SQLite!");
                 $use_mysqli = false;
                 $use_sqlite = true;
                 file_put_contents('.use_sqlite', '');
@@ -52,13 +53,27 @@ class Game
 
         if ($use_sqlite) {
             print "(c) SQLite3";
-            $this->db = new Database('SQLite3', 'mysqlitedb.db');
+            if (!file_exists('mysqlitedb.db')) {
+                $this->db = new Database('SQLite3', 'mysqlitedb.db');
+                $sql = file_get_contents('create_db.sql');
+                $this->db->query($sql);
+            } else {
+                $this->db = new Database('SQLite3', 'mysqlitedb.db');
+            }
+            $results = $this->db->query('SELECT 2+2');
+            while ($row = $results->fetchArray()) {
+                var_dump($row);
+            }
+        }
 
+
+        if ($use_sqlite) {
             if (!file_exists('mysqlitedb.db')) {
                 $sql = file_get_contents('create_db.sql');
                 $this->db->query($sql);
+            } else {
+                $this->db = new Database('SQLite3', 'mysqlitedb.db');
             }
-
             $results = $this->db->query('SELECT 2+2');
 
             while ($row = $results->fetchArray()) {
@@ -72,24 +87,22 @@ class Game
 
             $this->user = $_SESSION['user'];
 
-            $query = $this->db->query("select * from users where name='" . $this->user . "'");
+            $query = $this->db->query("select * from users where name='" . $this->user->username . "'");
             if ($data = $query->fetch_assoc()) {
-                $this->x = $data['x'];
-                $this->y = $data['y'];
-                $this->hp = $data['hp'];
-                $this->xp = $data['xp'];
+                $this->user->x = $data['x'];
+                $this->user->y = $data['y'];
+                $this->user->hp = $data['hp'];
+                $this->user->setMaxHP($data['hp']);
+                $this->user->exp = $data['xp'];
             } else {
                 $x = rand(-10, 10);
                 $y = rand(-10, 10);
                 $hp = 10;
                 $xp = 0;
-                $name = $this->user;
+                $name = $this->user->username;
+                // userRepository.saveUser($user);
                 $this->db->query("insert into users (name,x,y,hp,xp) values ('$name', $x, $y, $hp, $xp)");
                 print "Пользователь $name успешно зарегистрирован";
-                $this->x = $x;
-                $this->y = $y;
-                $this->hp = $hp;
-                $this->xp = $xp;
             }
         }
     }
@@ -113,20 +126,9 @@ class Game
         $this->show();
     }
 
-    public function getClosestDistance(): float
-    {
-        $x = $this->x;
-        $y = $this->y;
-        $query = $this->db->query("select 
-      min((x-$x)*(x-$x)+(y-$y)*(y-$y)) min 
-      from users where name!='" . $this->user . "'");
-        return sqrt(($query->fetch_assoc())['min']);
-    }
-
 
     public function show(): void
     {
-        // note lol
         require_once 'public/input_form.php';
     }
 }

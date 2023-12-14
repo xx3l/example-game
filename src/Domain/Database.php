@@ -1,6 +1,6 @@
 <?php
 
-namespace Group\ExampleGame\Game;
+namespace Group\ExampleGame\Domain;
 
 class Database
 {
