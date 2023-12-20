@@ -114,6 +114,8 @@ class Game {
       return $data['n'];
     }
         public function process_actions() {
+            $this->grantExperienceForTime(); // Начисление опыта за прожитое время
+
 		        if (isset($_REQUEST['direction'])) {
 				            $dir = $_REQUEST['direction'];
 					                $x = $this->x;
@@ -144,7 +146,12 @@ class Game {
 										                $this->y = $y;
 												        }
 
-								        }
+								        } else {
+                          // Взаимодействие с ближайшим врагом при наличии
+                          if (isset($_REQUEST['attack'])) {
+                            $this->attackClosestEnemy();
+                          }
+                        }
 			    }
         public function show() {
 		        print '
@@ -180,4 +187,80 @@ class Game {
             </form>
             ';
     }
+    public function attackClosestEnemy() {
+      $x = $this->x;
+      $y = $this->y;
+  
+      $query = $this->db->query("SELECT * FROM users WHERE name != '".$this->user."'");
+      $closestEnemy = null;
+      $closestDistance = PHP_INT_MAX;
+  
+      while ($row = $query->fetch_assoc()) {
+          $distance = sqrt(pow($x - $row['x'], 2) + pow($y - $row['y'], 2));
+          if ($distance < $closestDistance) {
+              $closestDistance = $distance;
+              $closestEnemy = $row;
+          }
+      }
+  
+      if ($closestEnemy) {
+          $enemyName = $closestEnemy['name'];
+          $this->db->query("UPDATE users SET hp = hp - 1 WHERE name = '$enemyName'");
+          
+          if ($closestEnemy['hp'] <= 0) {
+            // Враг убит
+            $this->grantExperience(10); // Игрок получает 10 опыта за убийство врага
+            print "Вы убили $enemyName!";
+        } else {
+            $this->grantExperience(1); // Игрок получает 1 опыт за успешную атаку
+            print "Вы атаковали $enemyName! У него теперь ".$closestEnemy['hp']." HP.";
+        }
+      } else {
+          print "Вокруг нет врагов.";
+      }
+    }
+
+    public function grantExperience($amount) {
+      $this->xp += $amount;
+      $this->db->query("UPDATE users SET xp = $this->xp WHERE name = '$this->user'");
+      print "Вы получили $amount опыта!";
+  
+      // Проверяем, достиг ли игрок 10 очков опыта
+      if ($this->xp >= 10) {
+          $this->levelUp();
+      }
+    }
+  
+    public function grantExperienceForTime() {
+      $currentTime = time();
+  
+      // Получаем время последнего обновления опыта за время
+      $lastUpdateTime = $_SESSION['lastUpdateTime'] ?? $currentTime;
+  
+      // Проверяем прошло ли 30 секунд с момента последнего обновления
+      if ($currentTime - $lastUpdateTime >= 30) {
+          // Обновляем время последнего обновления
+          $_SESSION['lastUpdateTime'] = $currentTime;
+  
+          // Начисляем всем игрокам на поле единицу опыта
+          $this->db->query("UPDATE users SET xp = xp + 1");
+          print "Все игроки получили +1 опыта за прожитые 30 секунд!";
+  
+          // Проверяем, достиг ли игрок 10 очков опыта
+          if ($this->xp >= 10) {
+              $this->levelUp();
+          }
+      }
+    }
+  
+    private function levelUp() {
+      $this->xp -= 10; // Уменьшаем опыт на 10 (потому что каждые 10 опыта = +2 к здоровью)
+      $this->hp += 2; // Увеличиваем здоровье на 2
+      $this->db->query("UPDATE users SET hp = $this->hp WHERE name = '$this->user'");
+      print "Вы получили +2 к здоровью за достижение 10 очков опыта!";
+    }
+  
+  
+
+  
 	}
