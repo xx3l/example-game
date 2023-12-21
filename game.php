@@ -201,6 +201,7 @@ class Game {
         public function show() {
 		        print '
             Вы в игре, '.$this->user.'!
+            <script src="control.js"></script>
             <form method="post">
             <input type="hidden" name="logout">
             <input type="submit" value="Выйти">
