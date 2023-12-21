@@ -1,11 +1,10 @@
 {
-    "name": "group/example-game",
-    "description": "Game IDK",
-    "type": "project",
-    "autoload": {
-        "psr-4": {
-            "Group\\ExampleGame\\": "src/"
-        }
-    },
-    "require": {}
+    "name"  : "group/example",
+    "type"  : "project",
+    "keywords": ["mmorpg"],
+    "homepage": "",
+    "license" : "",
+    "require": {
+        "workerman/workerman" : "~4.0.0"
+    }
 }

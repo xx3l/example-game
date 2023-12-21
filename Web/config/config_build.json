@@ -1,0 +1,4 @@
+{
+    "host": "production websocket host here",
+    "port": 8000
+}
