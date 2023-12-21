@@ -1,11 +1,13 @@
 <?php
 require 'db.php';
-class Game {
+class Game
+{
   protected $db;
   private $authorized = false;
   private $user;
   private $x, $y, $hp, $xp;
-  public function __construct() {
+  public function __construct()
+  {
     session_start();
     if (isset($_REQUEST['logout'])) {
       $_SESSION['user'] = false;
@@ -22,7 +24,7 @@ class Game {
       $use_mysqli = false;
       $use_sqlite = true;
     }
-        
+
     if (!class_exists('mysqli') && $use_mysqli) {
       print "mysqli не установлен";
       $use_mysqli = false;
@@ -34,13 +36,13 @@ class Game {
       try {
         $this->db = new DB("mysqli", "localhost", $db_user, $db_pass, 'game');
       } catch (Exception $e) {
-        print "Невозвожно подключиться к БД mysql: ".$e->getMessage();
+        print "Невозвожно подключиться к БД mysql: " . $e->getMessage();
         print "Будем использовать SQLite!";
         $use_mysqli = false;
         $use_sqlite = true;
         file_put_contents('.use_sqlite', '');
       }
-    } 
+    }
 
     if ($use_sqlite) {
       print "(c) SQLite3";
@@ -56,20 +58,20 @@ class Game {
         var_dump($row);
       }
     }
-        
+
     $this->authorized = $_SESSION['user'] ?? false;
     if ($this->authorized) {
       $this->user = $_SESSION['user'];
       $query = $this->db->query("select * from users 
-        where name='".$this->user."'");
+        where name='" . $this->user . "'");
       if ($data = $query->fetch_assoc()) {
         $this->x = $data['x'];
         $this->y = $data['y'];
         $this->hp = $data['hp'];
         $this->xp = $data['xp'];
       } else {
-        $x = rand(-10,10);
-        $y = rand(-10,10);
+        $x = rand(-10, 10);
+        $y = rand(-10, 10);
         $hp = 10;
         $xp = 0;
         $name = $this->user;
@@ -83,7 +85,8 @@ class Game {
       }
     }
   }
-  public function authorize() {
+  public function authorize()
+  {
     print '
       <form method="post">
       Представьтесь, пожалуйста
@@ -93,91 +96,135 @@ class Game {
       ';
     die();
   }
-  public function start() {
-    if (!$this->authorized) $this->authorize();
+  public function start()
+  {
+    if (!$this->authorized)
+      $this->authorize();
     $this->process_actions();
     $this->show();
   }
-  public function getClosestDistance() {
+  public function getClosestDistance()
+  {
     $x = $this->x;
     $y = $this->y;
     $query = $this->db->query("select 
       min((x-$x)*(x-$x)+(y-$y)*(y-$y)) min 
-      from users where name!='".$this->user."'");
+      from users where name!='" . $this->user . "'");
     return sqrt(($query->fetch_assoc())['min']);
   }
-  
-  public function pointInfo($x, $y) {
-      $query = $this->db->query("select count(*) n from users where x=$x and y=$y");
-      $data = $query->fetch_assoc();
-      print_r($data);
-      return $data['n'];
-    }
-        public function process_actions() {
-		        if (isset($_REQUEST['direction'])) {
-				            $dir = $_REQUEST['direction'];
-					                $x = $this->x;
-					                $y = $this->y;
-							            switch ($dir) {
-									                    case 'N': {
-												                        $y++;
-															                    break;
-															                }
-											                    case 'S': {
-														                        $y--;
-																	                    break;
-																	                }
-											                    case 'W': {
-														                        $x--;
-																	                    break;
-																	                }
-											                    case 'E': {
-														                        $x++;
-																	                    break;
-																	                }
-											                }
-							        $info = $this->pointInfo($x,$y);
-							        if ($this->pointInfo($x,$y) == 0) {
-									            $this->db->query("update users set x=$x,y=$y
-											                    where name='".$this->user."'");
-										                $this->x = $x;
-										                $this->y = $y;
-												        }
 
-								        }
-			    }
-        public function show() {
-		        print '
-            Вы в игре, '.$this->user.'!
+  private function getClosestUser()
+  {
+    $x = $this->x;
+    $y = $this->y;
+
+    $query = $this->db->query("SELECT name, x, y FROM users WHERE name!='" . $this->user . "' ORDER BY (x-$x)*(x-$x) + (y-$y)*(y-$y) LIMIT 1");
+
+    return $query->fetch_assoc();
+  }
+
+  private function attackUser($user, $damage, $experience)
+  {
+    $this->db->query("UPDATE users SET hp = hp - $damage, xp = xp + $experience WHERE name='" . $user['name'] . "'");
+  }
+
+  public function pointInfo($x, $y)
+  {
+    $query = $this->db->query("select count(*) n from users where x=$x and y=$y");
+    $data = $query->fetch_assoc();
+    print_r($data);
+    return $data['n'];
+  }
+  public function process_actions()
+  {
+    if (isset($_REQUEST['direction'])) {
+      $dir = $_REQUEST['direction'];
+      $x = $this->x;
+      $y = $this->y;
+      switch ($dir) {
+        case 'N': {
+            $y++;
+            break;
+          }
+        case 'S': {
+            $y--;
+            break;
+          }
+        case 'W': {
+            $x--;
+            break;
+          }
+        case 'E': {
+            $x++;
+            break;
+          }
+      }
+      $info = $this->pointInfo($x, $y);
+      if ($this->pointInfo($x, $y) == 0) {
+        $this->db->query("update users set x=$x,y=$y
+											                    where name='" . $this->user . "'");
+        $this->x = $x;
+        $this->y = $y;
+      }
+
+    }
+    if (isset($_REQUEST['attack'])) {
+      $closestUser = $this->getClosestUser();
+
+      if ($closestUser) {
+        // Perform the attack on the closest user
+        $damage = 1; // You can adjust the damage as needed
+        $experience = 2; // You can adjust the experience gain as needed
+
+        $this->attackUser($closestUser, $damage, $experience);
+      }
+    }
+  }
+
+  public function show()
+  {
+    print '
+            Вы в игре, ' . $this->user . '!
             <form method="post">
             <input type="hidden" name="logout">
             <input type="submit" value="Выйти">
             </form>
         ';
-        print "Здоровье: ".$this->hp;
-        print "<br>Опыт: ".$this->xp;
-        print "<br>X: ".$this->x;
-        print "<br>Y: ".$this->y;
-        print "<br>Ближайший враг: ".$this->getClosestDistance();
-        print '<form method="post">
+    print "Здоровье: " . $this->hp;
+    print "<br>Опыт: " . $this->xp;
+    print "<br>X: " . $this->x;
+    print "<br>Y: " . $this->y;
+    $closestDistance = $this->getClosestDistance();
+
+    print "<br>Ближайший враг: " . $closestDistance;
+    print '<form method="post">
             <input type="hidden" name="direction" value="N">
             <input type="submit" value="Идти на север">
             </form>
             ';
-        print '<form method="post">
+    print '<form method="post">
             <input type="hidden" name="direction" value="S">
             <input type="submit" value="Идти на юг">
             </form>
             ';
-        print '<form method="post">
+    print '<form method="post">
             <input type="hidden" name="direction" value="E">
             <input type="submit" value="Идти на восток">
             </form>
             ';
-        print '<form method="post">
+    print '<form method="post">
             <input type="hidden" name="direction" value="W">
             <input type="submit" value="Идти на запад">
             </form>
             ';
+
+    if ($closestDistance < 5) {
+      print '
+            <form method="post">
+            <input type="hidden" name="attack">
+            <input type="submit" value="Атаковать">
+            </form>
+              ';
     }
-	}
+  }
+}
