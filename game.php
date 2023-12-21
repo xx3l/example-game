@@ -1,10 +1,54 @@
 <?php
 require 'db.php';
+
+class EventManager {
+  protected $db;
+
+  public function __construct($db) {
+      $this->db = $db;
+  }
+
+  public function triggerEvent($eventName) {
+      // Реализация обработки событий 
+      switch ($eventName) {
+          case 'meteorShower':
+              $this->meteorShower();
+              break;
+          case 'blessing':
+              $this->blessing();
+              break;
+          // Другие события, еще не придумал
+      }
+  }
+
+  public function triggerRandomEvent() {
+    $events = ['meteorShower', 'blessing'];
+    $randomEvent = $events[array_rand($events)];
+    $this->triggerEvent($randomEvent);
+}
+
+  public function meteorShower() {
+    // Уменьшение здоровья всех игроков на поле на 5 HP
+    $this->db->query("UPDATE users SET hp = hp - 5");
+    print "Метеоритный дождь! Все игроки потеряли 5 HP!";
+  }
+
+  public function blessing() {
+    // Увеличение здоровья всех игроков на поле на 5 HP
+    $this->db->query("UPDATE users SET hp = hp + 5");
+    print "Солнце обратило на вас свой взор! Все игроки получили 5 HP!";
+  }
+
+  
+}
+
 class Game {
   protected $db;
   private $authorized = false;
   private $user;
   private $x, $y, $hp, $xp;
+  private $eventManager;
+
   public function __construct() {
     session_start();
     if (isset($_REQUEST['logout'])) {
@@ -82,6 +126,7 @@ class Game {
         $this->xp = $xp;
       }
     }
+    $this->eventManager = new EventManager($this->db);
   }
   public function authorize() {
     print '
@@ -236,6 +281,8 @@ class Game {
   
       // Получаем время последнего обновления опыта за время
       $lastUpdateTime = $_SESSION['lastUpdateTime'] ?? $currentTime;
+      // Получаем время последнего события 
+      $lastEventTime = $_SESSION['lastEventTime'] ?? $currentTime;
   
       // Проверяем прошло ли 30 секунд с момента последнего обновления
       if ($currentTime - $lastUpdateTime >= 30) {
@@ -250,6 +297,15 @@ class Game {
           if ($this->xp >= 10) {
               $this->levelUp();
           }
+          
+          // Проверяем прошло ли 20 секунд с момента последнего вызова события
+          if ($currentTime - $lastEventTime >= 20) {
+          // Обновляем время последнего вызова события
+          $_SESSION['lastEventTime'] = $currentTime;
+
+          // Вызываем случайное событие
+          $this->eventManager->triggerRandomEvent();
+      }
       }
     }
   
