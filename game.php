@@ -49,6 +49,8 @@ class Game {
   private $x, $y, $hp, $xp;
   private $eventManager;
 
+  private items;
+
   public function __construct() {
     session_start();
     if (isset($_REQUEST['logout'])) {
@@ -251,7 +253,19 @@ class Game {
   
       if ($closestEnemy) {
           $enemyName = $closestEnemy['name'];
-          $this->db->query("UPDATE users SET hp = hp - 1 WHERE name = '$enemyName'");
+	  $damage = 1;
+	  if (!empty($this->items['weapon'])) {
+	  	$damage+= $this->items['weapon']['damage'];
+	  }
+	  $query = $this->db->query("SELECT * items WHERE name = '$enemyName'");
+	  while ($row = $query->fetch_assoc()) {
+	  	$enemyItems[$row['type']] = [$row['stats'] => $row['value']];
+	  }
+	  if (!empty($enemyItems['armor'])) {
+	  	$damage = $damage - $enemyItems['armor']['defense']['value'];	
+		if ($damage < 0) $damage == 0;
+	  }
+          $this->db->query("UPDATE users SET hp = hp - $damage WHERE name = '$enemyName'");
           
           if ($closestEnemy['hp'] <= 0) {
             // Враг убит
