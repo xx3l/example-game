@@ -1,12 +1,19 @@
-<?php
-require 'db.php';
+<?php declare(strict_types=1);
 
-class Game {
-    protected $db;
+namespace App;
+
+require_once "config.php";
+
+use App\Models\User;
+use Exception;
+
+final class Game
+{
+    protected Database $db;
     private $authorized = false;
     private $user;
     private $x, $y, $hp, $xp;
-    private $eventManager;
+    private EventManager $eventManager;
 
     public function __construct() {
         session_start();
@@ -16,47 +23,40 @@ class Game {
         if (isset($_REQUEST['user'])) {
             $_SESSION['user'] = $_REQUEST['user'];
         }
-        $db_user = "game";
-        $db_pass = "123Game!!!";
-        $use_mysqli = true;
-        $use_sqlite = false;
 
-        if (file_exists('.use_sqlite')) {
-            $use_mysqli = false;
-            $use_sqlite = true;
-        }
 
-        if (!class_exists('mysqli') && $use_mysqli) {
-            print "mysqli не установлен";
-            $use_mysqli = false;
-            $use_sqlite = true;
-            file_put_contents('.use_sqlite', '');
-        }
+        $dotManager = new DotEnvManager("../.env");
+        $dotManager->parse()->load();
 
-        if (class_exists('mysqli') && $use_mysqli) {
-            try {
-                $this->db = new DB("mysqli", "localhost", $db_user, $db_pass, 'game');
-            } catch (Exception $e) {
-                print "Невозвожно подключиться к БД mysql: ".$e->getMessage();
-                print "Будем использовать SQLite!";
-                $use_mysqli = false;
-                $use_sqlite = true;
-                file_put_contents('.use_sqlite', '');
-            }
-        }
-
-        if ($use_sqlite) {
-            print "(c) SQLite3";
-            if (!file_exists('mysqlitedb.db')) {
-                $this->db = new DB('SQLite3', 'mysqlitedb.db');
-                $sql = file_get_contents('create_db.sql');
-                $this->db->query($sql);
+        if ($_ENV['GAME_DATABASE'] == "mysqli") {
+            if (class_exists('mysqli')) {
+                try {
+                    $this->db = new Database($_ENV['GAME_DATABASE'], $_ENV['DB_CONNECTION'], $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD'], $_ENV['DB_TABLE']);
+                } catch (Exception $e) {
+                    Utils::console_log("Невозможно подключиться к БД mysql: " . $e->getMessage());
+                    $_ENV['GAME_DATABASE'] = "sqlite";
+                }
             } else {
-                $this->db = new DB('SQLite3', 'mysqlitedb.db');
+                Utils::console_log("mysqli не установлен");
+                $_ENV['GAME_DATABASE'] = "SQLite3";
             }
-            $results = $this->db->query('SELECT 2+2');
-            while ($row = $results->fetchArray()) {
-                var_dump($row);
+        }
+
+        if ($_ENV['GAME_DATABASE'] == "SQLite3") {
+            if (class_exists('SQLite3')) {
+                Utils::console_log("Будем использовать SQLite!");
+
+                if (!file_exists(SQLITE3_DB)) {
+                    $this->db = new Database($_ENV['GAME_DATABASE'], SQLITE3_DB);
+                    $sql = file_get_contents(SQLITE3_SCRIPT);
+                    $this->db->query($sql);
+                } else {
+                    $this->db = new Database('SQLite3', SQLITE3_DB);
+                }
+            } else {
+                Utils::console_log("SQLite3 не установлен");
+                print "no database engine provided. Game не будет";
+                die();
             }
         }
 
