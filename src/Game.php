@@ -14,11 +14,17 @@ final class Game
     private User $user;
     private EventManager $eventManager;
 
-    public function __construct() {
+    /**
+     * @throws Exception
+     */
+    public function __construct()
+    {
         session_start();
         if (isset($_REQUEST['logout'])) {
-            $_SESSION['user'] = false;
+            $_SESSION['user'] = null;
+            $_SESSION['password'] = null;
         }
+
         if (isset($_REQUEST['user'])) {
             $_SESSION['user'] = $_REQUEST['user'];
         }
@@ -143,10 +149,11 @@ final class Game
     {
         $query = $this->db->query("select count(*) n from users where x=$x and y=$y");
         $data = $query->fetch_assoc();
-        print_r($data);
         return $data['n'];
     }
-    public function process_actions() {
+
+    public function process_actions(): void
+    {
         $this->grantExperienceForTime(); // Начисление опыта за прожитое время
 
         if (isset($_REQUEST['direction'])) {
@@ -253,7 +260,7 @@ final class Game
                 print "Вы убили $enemyName!";
             } else {
                 $this->grantExperience(1); // Игрок получает 1 опыт за успешную атаку
-                print "Вы атаковали $enemyName! У него теперь ".$closestEnemy['hp']." HP.";
+                print "Вы атаковали $enemyName! У него теперь " . $closestEnemy['hp'] . " HP.";
             }
         } else {
             print "Вокруг нет врагов.";
