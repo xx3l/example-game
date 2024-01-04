@@ -1,0 +1,14 @@
+.xdebug-error {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    border: none;
+}
+
+.xdebug-error th span {
+    background-color: transparent;
+}
+
+.xdebug-error th i {
+    color: floralwhite;
+}
