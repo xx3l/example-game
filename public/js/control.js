@@ -16,7 +16,7 @@ document.addEventListener("keydown", function(event) {
 });
 
 function sendDirection(direction) {
-    fetch('game.php', {
+    fetch('../../src/Game.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
