@@ -112,16 +112,35 @@ final class Game
         $this->process_actions();
         $this->show();
     }
-    public function getClosestDistance() {
-        $x = $this->x;
-        $y = $this->y;
-        $query = $this->db->query("select 
-      min((x-$x)*(x-$x)+(y-$y)*(y-$y)) min 
-      from users where name!='".$this->user."'");
-        return sqrt(($query->fetch_assoc())['min']);
+
+    public function getClosestDistance(): float|null
+    {
+        $signX = "-";
+        $signY = "-";
+
+        if ($this->user->x < 0) {
+            $signX = "+";
+        }
+        if ($this->user->y < 0) {
+            $signY = "+";
+        }
+
+        $x = abs($this->user->x);
+        $y = abs($this->user->y);
+
+        $query = $this->db->query("select min((x$signX$x)*(x$signX$x)+(y$signY$y)*(y$signY$y)) min from users where name!='{$this->user->name}'");
+
+        $distance = ($query->fetch_assoc())['min'];
+
+        if (is_null($distance)) {
+            return null;
+        }
+
+        return sqrt($distance);
     }
 
-    public function pointInfo($x, $y) {
+    public function pointInfo($x, $y)
+    {
         $query = $this->db->query("select count(*) n from users where x=$x and y=$y");
         $data = $query->fetch_assoc();
         print_r($data);
