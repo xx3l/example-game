@@ -11,8 +11,7 @@ final class Game
 {
     protected Database $db;
     private $authorized = false;
-    private $user;
-    private $x, $y, $hp, $xp;
+    private User $user;
     private EventManager $eventManager;
 
     public function __construct() {
@@ -23,7 +22,9 @@ final class Game
         if (isset($_REQUEST['user'])) {
             $_SESSION['user'] = $_REQUEST['user'];
         }
-
+        if (isset($_REQUEST['password'])) {
+            $_SESSION['password'] = $_REQUEST['password'];
+        }
 
         $dotManager = new DotEnvManager("../.env");
         $dotManager->parse()->load();
@@ -60,45 +61,54 @@ final class Game
             }
         }
 
-        $this->authorized = $_SESSION['user'] ?? false;
+        $this->authorized = false;
+        if (isset($_SESSION['user']) && isset($_SESSION['password'])) {
+            if (is_string($_SESSION['user']) && is_string($_SESSION['password'])) {
+                $this->authorized = true;
+            }
+        }
         if ($this->authorized) {
-            $this->user = $_SESSION['user'];
-            $query = $this->db->query("select * from users 
-        where name='".$this->user."'");
+            $query = $this->db->query("select * from users where name='{$_SESSION['user']}' AND password='{$_SESSION['password']}'");
+
             if ($data = $query->fetch_assoc()) {
-                $this->x = $data['x'];
-                $this->y = $data['y'];
-                $this->hp = $data['hp'];
-                $this->xp = $data['xp'];
+                $this->user = User::create(
+                    $data['x'],
+                    $data['y'],
+                    $data['hp'],
+                    $data['xp'],
+                    $data['maxHp'],
+                    $data['name'],
+                    $data['password'],
+                    $data['powerAttack'],
+                    $data['inventorySize']
+                );
             } else {
-                $x = rand(-10,10);
-                $y = rand(-10,10);
-                $hp = 10;
-                $xp = 0;
-                $name = $this->user;
-                $this->db->query("insert into users (name,x,y,hp,xp) 
-              values ('$name', $x, $y, $hp, $xp)");
+                $this->user = new User($_SESSION['user'], $_SESSION['password']);
+                $this->db->query("insert into users (name, password, xp, hp, maxHp, x, y, powerAttack, inventorySize) values ('{$this->user->name}', '{$this->user->password}', '{$this->user->xp}', '{$this->user->hp}', '{$this->user->maxHp}', '{$this->user->x}', '{$this->user->y}', '{$this->user->powerAttack}', '{$this->user->inventorySize}')");
                 print "О, новый пользователь!";
-                $this->x = $x;
-                $this->y = $y;
-                $this->hp = $hp;
-                $this->xp = $xp;
             }
         }
         $this->eventManager = new EventManager($this->db);
     }
-    public function authorize() {
+
+    public function authorize()
+    {
         print '
       <form method="post">
       Представьтесь, пожалуйста
       <input type="text" name="user">
+      <input type="text" name="password">
       <input type="submit" value="Войти">
       </form>
       ';
         die();
     }
-    public function start() {
-        if (!$this->authorized) $this->authorize();
+
+    public function start(): void
+    {
+        if (!$this->authorized) {
+            $this->authorize();
+        }
         $this->process_actions();
         $this->show();
     }
@@ -122,8 +132,8 @@ final class Game
 
         if (isset($_REQUEST['direction'])) {
             $dir = $_REQUEST['direction'];
-            $x = $this->x;
-            $y = $this->y;
+            $x = $this->user->x;
+            $y = $this->user->y;
             switch ($dir) {
                 case 'N': {
                     $y++;
@@ -142,12 +152,10 @@ final class Game
                     break;
                 }
             }
-            $info = $this->pointInfo($x,$y);
-            if ($this->pointInfo($x,$y) == 0) {
-                $this->db->query("update users set x=$x,y=$y
-											                    where name='".$this->user."'");
-                $this->x = $x;
-                $this->y = $y;
+            if ($this->pointInfo($x, $y) == 0) {
+                $this->db->query("update users set x=$x,y=$y where name='{$this->user->name}'");
+                $this->user->x = $x;
+                $this->user->y = $y;
             }
 
         } else {
@@ -157,20 +165,26 @@ final class Game
             }
         }
     }
-    public function show() {
+
+    public function show(): void
+    {
         print '
-            Вы в игре, '.$this->user.'!
-            <script src="control.js"></script>
-            <form method="post">
-            <input type="hidden" name="logout">
-            <input type="submit" value="Выйти">
-            </form>
-        ';
-        print "Здоровье: ".$this->hp;
-        print "<br>Опыт: ".$this->xp;
-        print "<br>X: ".$this->x;
-        print "<br>Y: ".$this->y;
-        print "<br>Ближайший враг: ".$this->getClosestDistance();
+        Вы в игре, ' . $this->user->name . '!
+        <form method="post">
+        <input type="hidden" name="logout">
+        <input type="submit" value="Выйти">
+        </form>
+    ';
+        print "Здоровье: " . $this->user->hp;
+        print "<br>Максимальное здоровье: " . $this->user->maxHp;
+        print "<br>Сила атаки: " . $this->user->powerAttack;
+        print "<br>Опыт: " . $this->user->xp;
+        print "<br>X: " . $this->user->x;
+        print "<br>Y: " . $this->user->y;
+        $closestDistance = $this->getClosestDistance();
+        if ($closestDistance) {
+            print "<br>Ближайший враг: " . $closestDistance;
+        }
         print '<form method="post">
             <input type="hidden" name="direction" value="N">
             <input type="submit" value="Идти на север">
@@ -192,11 +206,13 @@ final class Game
             </form>
             ';
     }
-    public function attackClosestEnemy() {
-        $x = $this->x;
-        $y = $this->y;
 
-        $query = $this->db->query("SELECT * FROM users WHERE name != '".$this->user."'");
+    public function attackClosestEnemy(): void
+    {
+        $x = $this->user->x;
+        $y = $this->user->y;
+
+        $query = $this->db->query("SELECT * FROM users WHERE name != '" . $this->user->name . "'");
         $closestEnemy = null;
         $closestDistance = PHP_INT_MAX;
 
@@ -225,13 +241,14 @@ final class Game
         }
     }
 
-    public function grantExperience($amount) {
-        $this->xp += $amount;
-        $this->db->query("UPDATE users SET xp = $this->xp WHERE name = '$this->user'");
+    public function grantExperience(int $amount): void
+    {
+        $this->user->xp += $amount;
+        $this->db->query("UPDATE users SET xp = {$this->user->xp} WHERE name = '{$this->user->name}'");
         print "Вы получили $amount опыта!";
 
         // Проверяем, достиг ли игрок 10 очков опыта
-        if ($this->xp >= 10) {
+        if ($this->user->xp >= 10) {
             $this->levelUp();
         }
     }
@@ -254,7 +271,7 @@ final class Game
             print "Все игроки получили +1 опыта за прожитые 30 секунд!";
 
             // Проверяем, достиг ли игрок 10 очков опыта
-            if ($this->xp >= 10) {
+            if ($this->user->xp >= 10) {
                 $this->levelUp();
             }
 
@@ -269,14 +286,12 @@ final class Game
         }
     }
 
-    private function levelUp() {
-        $this->xp -= 10; // Уменьшаем опыт на 10 (потому что каждые 10 опыта = +2 к здоровью)
-        $this->hp += 2; // Увеличиваем здоровье на 2
-        $this->db->query("UPDATE users SET hp = $this->hp WHERE name = '$this->user'");
+    private function levelUp(): void
+    {
+        $this->user->xp -= 10; // Уменьшаем опыт на 10 (потому что каждые 10 опыта = +2 к здоровью)
+        $this->user->hp += 2; // Увеличиваем здоровье на 2
+        $this->user->maxHp += 2;
+        $this->db->query("UPDATE users SET hp={$this->user->hp}, maxHP={$this->user->maxHp} WHERE name = '{$this->user->name}'");
         print "Вы получили +2 к здоровью за достижение 10 очков опыта!";
     }
-
-
-
-
 }
