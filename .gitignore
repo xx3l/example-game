@@ -94,3 +94,6 @@ composer.phar
 
 # Embedded web-server pid file
 /.web-server-pid
+
+/src/Database/
+!/src/Database/create_db.sql
