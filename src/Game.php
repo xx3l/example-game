@@ -272,13 +272,26 @@ final class Game
         }
     }
 
-    public function grantExperienceForTime() {
+    public function grantExperienceForTime(): void
+    {
         $currentTime = time();
 
         // Получаем время последнего обновления опыта за время
-        $lastUpdateTime = $_SESSION['lastUpdateTime'] ?? $currentTime;
+        if (!isset($_SESSION['lastUpdateTime'])) {
+            $_SESSION['lastUpdateTime'] = $currentTime;
+            $lastUpdateTime = $currentTime;
+        } else {
+            $lastUpdateTime = $_SESSION['lastUpdateTime'];
+        }
         // Получаем время последнего события
-        $lastEventTime = $_SESSION['lastEventTime'] ?? $currentTime;
+        if (!isset($_SESSION['lastEventTime'])) {
+            $_SESSION['lastEventTime'] = $currentTime;
+            $lastEventTime = $currentTime;
+        } else {
+            $lastEventTime = $_SESSION['lastEventTime'];
+        }
+
+
 
         // Проверяем прошло ли 30 секунд с момента последнего обновления
         if ($currentTime - $lastUpdateTime >= 30) {
