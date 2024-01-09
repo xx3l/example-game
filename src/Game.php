@@ -104,23 +104,26 @@ final class Game
         $this->eventManager = new EventManager($this->db);
     }
 
-    public function authorize()
-    {
-        print '
-      <form method="post">
-      Представьтесь, пожалуйста
-      <input type="text" name="user">
-      <input type="text" name="password">
-      <input type="submit" value="Войти">
-      </form>
-      ';
-        die();
+	/**
+	 * @throws \Twig\Error\SyntaxError
+	 * @throws \Twig\Error\RuntimeError
+	 * @throws \Twig\Error\LoaderError
+	 */
+	public function authorize() : void
+	{
+		echo $this->twig->render("auth.twig");
     }
 
-    public function start(): void
+	/**
+	 * @throws \Twig\Error\SyntaxError
+	 * @throws \Twig\Error\RuntimeError
+	 * @throws \Twig\Error\LoaderError
+	 */
+	public function start(): void
     {
         if (!$this->authorized) {
             $this->authorize();
+			return;
         }
         $this->process_actions();
         $this->show();
