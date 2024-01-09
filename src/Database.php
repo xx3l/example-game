@@ -9,6 +9,9 @@ final class Database
     public function __construct(private readonly string $driver, ...$params)
     {
         $this->db = new $driver(...$params);
+		if ($this->driver == 'SQLite3'){
+			$this->db->enableExceptions(true);
+		}
     }
 
     public function query($sql)
