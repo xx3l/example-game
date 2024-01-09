@@ -2,7 +2,7 @@
 
 namespace App;
 
-class Utils
+final class Utils
 {
     static function console_log($output, $with_script_tags = true) : void
     {

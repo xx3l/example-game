@@ -16,8 +16,5 @@ require '../vendor/autoload.php';
 
 $loader = new FilesystemLoader(array('components/', 'pages/'));
 $twig   = new Environment($loader);
-
-//echo $twig->render('index', ['name' => 'Fabien']);
-
-$game = new Game($twig);
+$game 	= new Game($twig);
 $game->start();
