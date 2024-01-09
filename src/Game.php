@@ -36,34 +36,37 @@ final class Game
         $dotManager = new DotEnvManager("../.env");
         $dotManager->parse()->load();
 
-        if ($_ENV['GAME_DATABASE'] == "mysqli") {
-            if (class_exists('mysqli')) {
+        if ($_ENV['GAME_DATABASE'] == DbDriver::MySQL->value) {
+            if (class_exists(DbDriver::MySQL->value)) {
                 try {
                     $this->db = new Database($_ENV['GAME_DATABASE'], $_ENV['DB_CONNECTION'], $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD'], $_ENV['DB_TABLE']);
                 } catch (Exception $e) {
-                    Utils::console_log("Невозможно подключиться к БД mysql: " . $e->getMessage());
-                    $_ENV['GAME_DATABASE'] = "sqlite";
+                    Utils::console_log("Невозможно подключиться к БД " . DbDriver::MySQL->value . ": " . $e->getMessage());
+                    $_ENV['GAME_DATABASE'] = DbDriver::SQLite3->value;
                 }
             } else {
-                Utils::console_log("mysqli не установлен");
-                $_ENV['GAME_DATABASE'] = "SQLite3";
+                Utils::console_log(DbDriver::MySQL->value . " не установлен");
+                $_ENV['GAME_DATABASE'] = DbDriver::SQLite3->value;
             }
         }
 
-        if ($_ENV['GAME_DATABASE'] == "SQLite3") {
-            if (class_exists('SQLite3')) {
-                Utils::console_log("Будем использовать SQLite!");
+        if ($_ENV['GAME_DATABASE'] == DbDriver::SQLite3->value) {
+            if (class_exists(DbDriver::SQLite3->value)) {
+                Utils::console_log("Будем использовать " . DbDriver::SQLite3->name . "!");
 
                 if (!file_exists(SQLITE3_DB)) {
                     $this->db = new Database($_ENV['GAME_DATABASE'], SQLITE3_DB);
                     $sql = file_get_contents(SQLITE3_SCRIPT);
                     $this->db->query($sql);
                 } else {
-                    $this->db = new Database('SQLite3', SQLITE3_DB);
+	                $this->db = new Database($_ENV['GAME_DATABASE'], SQLITE3_DB);
                 }
             } else {
                 Utils::console_log("SQLite3 не установлен");
                 print "no database engine provided. Game не будет";
+	            Utils::console_log("Не получилось использовать следующие драйверы БД для установки игровой сессии: "
+		            . DbDriver::SQLite3->value . ", " . DbDriver::MySQL->value);
+	            Utils::console_log("Проверьте php.ini на предмет включенных расширений, наличие соответствующих программных инструментов на сервере или в контейнере");
                 die();
             }
         }
