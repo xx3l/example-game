@@ -9,8 +9,15 @@
 
 <?php
 use App\Game;
+use Twig\Loader\FilesystemLoader;
+use Twig\Environment;
 
 require '../vendor/autoload.php';
 
-$game = new Game();
+$loader = new FilesystemLoader('components/');
+$twig   = new Environment($loader);
+
+//echo $twig->render('index', ['name' => 'Fabien']);
+
+$game = new Game($twig);
 $game->start();

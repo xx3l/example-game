@@ -1,0 +1,14 @@
+<h1>Вы в игре, {{user.name}}!</h1>
+<form method="post">
+	<input type="hidden" name="logout">
+	<input type="submit" value="Выйти">
+</form>
+<p>Здоровье: {{user.hp}}<p>
+<p>Максимальное здоровье: {{user.maxHp}}<p>
+<p>Сила атаки: {{user.powerAttack}}<p>
+<p>Опыт: {{user.xp}}<p>
+<p>X: {{user.x}}<p>
+<p>Y: {{user.y}}<p>
+{% if closestDistance %}
+    <p>Ближайший враг: {{closestDistance}}<p>
+{% endif %}

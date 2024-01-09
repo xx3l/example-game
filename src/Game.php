@@ -2,23 +2,24 @@
 
 namespace App;
 
-require_once "config.php";
-
 use App\Models\User;
 use Exception;
+use Twig\Environment;
 
 final class Game
 {
     protected Database $db;
-    private $authorized = false;
+    private bool $authorized = false;
     private User $user;
     private EventManager $eventManager;
+	private Environment $twig;
 
     /**
      * @throws Exception
      */
-    public function __construct()
+    public function __construct(Environment $template)
     {
+		$this->twig = $template;
         session_start();
         if (isset($_REQUEST['logout'])) {
             $_SESSION['user'] = null;
@@ -192,45 +193,18 @@ final class Game
         }
     }
 
-    public function show(): void
+	/**
+	 * @throws \Twig\Error\SyntaxError
+	 * @throws \Twig\Error\RuntimeError
+	 * @throws \Twig\Error\LoaderError
+	 */
+	public function show(): void
     {
-        print '
-        Вы в игре, ' . $this->user->name . '!
-        <form method="post">
-        <input type="hidden" name="logout">
-        <input type="submit" value="Выйти">
-        </form>
-    ';
-        print "Здоровье: " . $this->user->hp;
-        print "<br>Максимальное здоровье: " . $this->user->maxHp;
-        print "<br>Сила атаки: " . $this->user->powerAttack;
-        print "<br>Опыт: " . $this->user->xp;
-        print "<br>X: " . $this->user->x;
-        print "<br>Y: " . $this->user->y;
-        $closestDistance = $this->getClosestDistance();
-        if ($closestDistance) {
-            print "<br>Ближайший враг: " . $closestDistance;
-        }
-        print '<form method="post">
-            <input type="hidden" name="direction" value="N">
-            <input type="submit" value="Идти на север">
-            </form>
-            ';
-        print '<form method="post">
-            <input type="hidden" name="direction" value="S">
-            <input type="submit" value="Идти на юг">
-            </form>
-            ';
-        print '<form method="post">
-            <input type="hidden" name="direction" value="E">
-            <input type="submit" value="Идти на восток">
-            </form>
-            ';
-        print '<form method="post">
-            <input type="hidden" name="direction" value="W">
-            <input type="submit" value="Идти на запад">
-            </form>
-            ';
+		echo $this->twig->render("user-info.twig", array(
+			"user"              => $this->user,
+			"closestDistance"   => $this->getClosestDistance(),
+		));
+        echo $this->twig->render("user-controls.twig");
     }
 
     public function attackClosestEnemy(): void
