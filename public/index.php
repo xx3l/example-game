@@ -14,7 +14,7 @@ use Twig\Environment;
 
 require '../vendor/autoload.php';
 
-$loader = new FilesystemLoader('components/');
+$loader = new FilesystemLoader(array('components/', 'pages/'));
 $twig   = new Environment($loader);
 
 //echo $twig->render('index', ['name' => 'Fabien']);

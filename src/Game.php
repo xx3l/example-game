@@ -63,10 +63,13 @@ final class Game
                 }
             } else {
                 Utils::console_log("SQLite3 не установлен");
-                print "no database engine provided. Game не будет";
 	            Utils::console_log("Не получилось использовать следующие драйверы БД для установки игровой сессии: "
 		            . DbDriver::SQLite3->value . ", " . DbDriver::MySQL->value);
 	            Utils::console_log("Проверьте php.ini на предмет включенных расширений, наличие соответствующих программных инструментов на сервере или в контейнере");
+	            echo $this->twig->render("500.twig", array(
+					"title" => "Ошибка сервера",
+		            "message" => "К сожалению, на данный момент игра недоступна, поскольку ведутся работы на игровом сервере. Пожалуйста, зайдите позже"
+	            ));
                 die();
             }
         }
